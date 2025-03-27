@@ -1,4 +1,4 @@
-from components.ai import HostileEnemy
+from components.ai import HostileEnemy,Animal
 from components.fighter import Fighter
 from entity import Actor
 
@@ -23,4 +23,12 @@ troll = Actor(
     name="Troll",
     ai_cls=HostileEnemy,
     fighter=Fighter(hp=16, defense=1, power=4),
+)
+deer = Actor(
+    char="d",
+    color=(0, 127, 0),
+    name="Deer",
+    ai_cls=Animal,
+    fighter=Fighter(hp=10, defense=1, power=0),
+
 )
