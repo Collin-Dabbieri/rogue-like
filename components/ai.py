@@ -7,14 +7,12 @@ import tcod
 from tcod.map import compute_fov
 
 from actions import Action, MeleeAction, MovementAction, WaitAction
-from components.base_component import BaseComponent
 
 if TYPE_CHECKING:
     from entity import Actor
 
 
-class BaseAI(Action, BaseComponent):
-    entity: Actor
+class BaseAI(Action):
 
     def perform(self) -> None:
         raise NotImplementedError()
@@ -49,19 +47,18 @@ class BaseAI(Action, BaseComponent):
         return [(index[0], index[1]) for index in path]
     
     def get_fov(self):
-        """Recompute the visible area based on the players point of view."""
+        """Recompute the visible area based on self's point of view."""
         return compute_fov(
             self.entity.gamemap.tiles["transparent"],
             (self.entity.x, self.entity.y),
             radius=8,
         )
     
-    def get_entities_in_fov(self):
-        '''Gets all entities within fov of self, sorted by distance from self'''
+    def get_actors_in_fov(self):
+        '''Gets all actors within fov of self, sorted by distance from self'''
         fov=self.get_fov()
         entities_in_fov=[]
         distances=[]
-        #for target in self.entity.gamemap.entities:
         for target in set(self.entity.gamemap.actors) - {self.entity}:
             if fov[target.x,target.y]:
                 #the target entity you're checking is within fov of self
@@ -89,7 +86,7 @@ class HostileEnemy(BaseAI):
     def perform(self) -> None:
         # hostile enemies can target any Actor
         # they will target the closest Actor that is within their vision
-        entities_in_fov_sorted,distances_sorted=self.get_entities_in_fov()
+        entities_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
         if entities_in_fov_sorted is None:
             return WaitAction(self.entity).perform()
@@ -98,7 +95,6 @@ class HostileEnemy(BaseAI):
         distance = distances_sorted[0]
         dx = target.x - self.entity.x
         dy = target.y - self.entity.y
-
 
         if distance <= 1:
             return MeleeAction(self.entity, dx, dy).perform()
@@ -121,7 +117,7 @@ class Animal(BaseAI):
 
     def perform(self) -> None:
         # if there is an Actor in your fov, run away from it
-        entities_in_fov_sorted,distances_sorted=self.get_entities_in_fov()
+        entities_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
         if entities_in_fov_sorted is None:
             return WaitAction(self.entity).perform()
