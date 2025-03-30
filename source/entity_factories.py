@@ -8,6 +8,7 @@ player = Actor(
     name="Player",
     ai_cls=HostileEnemy,
     fighter=Fighter(hp=30, defense=2, power=5),
+    faction=0,
 )
 
 orc = Actor(
@@ -16,6 +17,7 @@ orc = Actor(
     name="Orc",
     ai_cls=HostileEnemy,
     fighter=Fighter(hp=10, defense=0, power=3),
+    faction=1
 )
 troll = Actor(
     char="T",
@@ -23,6 +25,7 @@ troll = Actor(
     name="Troll",
     ai_cls=HostileEnemy,
     fighter=Fighter(hp=16, defense=1, power=4),
+    faction=1
 )
 deer = Actor(
     char="d",
@@ -30,5 +33,6 @@ deer = Actor(
     name="Deer",
     ai_cls=Animal,
     fighter=Fighter(hp=10, defense=1, power=0),
+    faction=2,
 
 )

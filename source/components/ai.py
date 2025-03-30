@@ -5,6 +5,7 @@ from typing import List, Tuple, TYPE_CHECKING
 import numpy as np  # type: ignore
 import tcod
 from tcod.map import compute_fov
+import random
 
 from actions import Action, MeleeAction, MovementAction, WaitAction
 
@@ -57,25 +58,25 @@ class BaseAI(Action):
     def get_actors_in_fov(self):
         '''Gets all actors within fov of self, sorted by distance from self'''
         fov=self.get_fov()
-        entities_in_fov=[]
+        actors_in_fov=[]
         distances=[]
         for target in set(self.entity.gamemap.actors) - {self.entity}:
             if fov[target.x,target.y]:
                 #the target entity you're checking is within fov of self
-                entities_in_fov.append(target)
+                actors_in_fov.append(target)
                 dx = target.x - self.entity.x
                 dy = target.y - self.entity.y
                 distance = max(abs(dx), abs(dy))  # Chebyshev distance.
                 distances.append(distance)
 
-        if len(entities_in_fov)==0:
+        if len(actors_in_fov)==0:
             return None,None
 
         idx_sort=np.argsort(distances)
-        entities_in_fov_sorted=np.array(entities_in_fov)[idx_sort]
+        actors_in_fov_sorted=np.array(actors_in_fov)[idx_sort]
         distances_sorted=np.array(distances)[idx_sort]
 
-        return entities_in_fov_sorted,distances_sorted
+        return actors_in_fov_sorted,distances_sorted
 
     
 class HostileEnemy(BaseAI):
@@ -86,13 +87,23 @@ class HostileEnemy(BaseAI):
     def perform(self) -> None:
         # hostile enemies can target any Actor
         # they will target the closest Actor that is within their vision
-        entities_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
+        actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
-        if entities_in_fov_sorted is None:
+        if actors_in_fov_sorted is None:
             return WaitAction(self.entity).perform()
         
-        target = entities_in_fov_sorted[0]
-        distance = distances_sorted[0]
+        # Orcs and Trolls should not target other orcs and trolls
+        target = None
+        for i in range(len(actors_in_fov_sorted)):
+            actor=actors_in_fov_sorted[i]
+            if actor.faction!=self.entity.faction:
+                target=actor
+                distance=distances_sorted[i]
+                break
+
+        if target is None:
+            return WaitAction(self.entity).perform()
+        
         dx = target.x - self.entity.x
         dy = target.y - self.entity.y
 
@@ -116,14 +127,31 @@ class Animal(BaseAI):
         self.path: List[Tuple[int, int]] = []
 
     def perform(self) -> None:
-        # if there is an Actor in your fov, run away from it
-        entities_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
+        # if there is an Actor in your fov that is not in your faction, run away from it
+        actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
-        if entities_in_fov_sorted is None:
-            return WaitAction(self.entity).perform()
+        if actors_in_fov_sorted is None:
+            dx=random.randint(-1,1)
+            dy=random.randint(-1,1)
+            return MovementAction(
+                self.entity, dx, dy,
+            ).perform()
+
+        # check if actors in field-of-view are not in your faction
+        target = None
+        for i in range(len(actors_in_fov_sorted)):
+            actor=actors_in_fov_sorted[i]
+            if actor.faction!=self.entity.faction:
+                target=actor
+                break
+
+        if target is None:
+            dx=random.randint(-1,1)
+            dy=random.randint(-1,1)
+            return MovementAction(
+                self.entity, dx, dy,
+            ).perform()
         
-        target = entities_in_fov_sorted[0]
-        distance = distances_sorted[0]
         dx = target.x - self.entity.x
         dy = target.y - self.entity.y
 

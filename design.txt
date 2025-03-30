@@ -1,0 +1,37 @@
+
+
+## Resources 
+- Health
+- Mana - altering fabric of reality costs mana, resource that is spent to attack/alter the environment/drain stability/remove corruption, etc
+- Stability - drained over time by existing in this dimension, restored by draining from other stable creatures
+
+## Corruption
+Spreads over time, alters reality in dangerous ways. The strength of the alterations are determined by the local density of corruption.
+I.e the fraction of corrupted tiles over total tiles in an area.
+
+## Spells
+- sense entities within some radius, uses mana over time while on
+- teleport to random location, uses mana and requires uninterrupted concentration for a while
+- make a permanent change to the characteristics of the player, could also limit this by requiring a one-time-use alter or something
+
+Each spell could be generated through alchemy, combinations of different reagents using different catalysts can produce different effects
+Each reagent could have some meta-property that describes what effect it has, like heat, cleansing, light, etc
+this could make the effect of some combinations somewhat predictable but could also have surprising/unexpected results
+
+## Ai design ideas
+
+- goblins/orc/troll - Hostile, spawn in a cave with a bunch of allies, kills stability sources to regain stability
+    if you see a non-ally:
+        attack
+    elif you need stability:
+        wander from room to room looking for stability sources to kill
+    else:
+        travel to home cave
+
+- deer - Neutral, spawn in random room, stability naturally regenerates over time, will spend mana to remove corruption 
+    if you see a hostile creature:
+        run away
+    elif you need mana:
+        travel to nearest mana source and refill
+    else:
+        wander from room to room

@@ -82,7 +82,8 @@ class Actor(Entity):
         color: Tuple[int, int, int] = (255, 255, 255),
         name: str = "<Unnamed>",
         ai_cls: Type[BaseAI],
-        fighter: Fighter
+        fighter: Fighter,
+        faction: int = 0
     ):
         super().__init__(
             x=x,
@@ -98,6 +99,7 @@ class Actor(Entity):
 
         self.fighter = fighter
         self.fighter.parent = self
+        self.faction = faction
 
     @property
     def is_alive(self) -> bool:

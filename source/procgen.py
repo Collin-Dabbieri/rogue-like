@@ -46,19 +46,29 @@ def place_entities(
     room: RectangularRoom, dungeon: GameMap, maximum_monsters: int,
 ) -> None:
     number_of_monsters = random.randint(0, maximum_monsters)
+    
+    # is this room an orc cave?
+    if random.random()>0.8:
 
-    for i in range(number_of_monsters):
-        x = random.randint(room.x1 + 1, room.x2 - 1)
-        y = random.randint(room.y1 + 1, room.y2 - 1)
+        for i in range(number_of_monsters):
+            x = random.randint(room.x1 + 1, room.x2 - 1)
+            y = random.randint(room.y1 + 1, room.y2 - 1)
 
-        if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            rand=random.random()
-            if rand < 0.4:
-                entity_factories.orc.spawn(dungeon, x, y)
-            elif rand < 0.8:
+            if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
+                if random.random() < 0.8:
+                    entity_factories.orc.spawn(dungeon, x, y)
+                else:
+                    entity_factories.troll.spawn(dungeon, x, y)
+    else:
+        num_deer=random.randint(0,3)
+
+        for i in range(num_deer):
+            x = random.randint(room.x1 + 1, room.x2 - 1)
+            y = random.randint(room.y1 + 1, room.y2 - 1)
+
+            if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
                 entity_factories.deer.spawn(dungeon, x, y)
-            else:
-                entity_factories.troll.spawn(dungeon, x, y)
+
     
 def tunnel_between(
     start: Tuple[int, int], end: Tuple[int, int]
