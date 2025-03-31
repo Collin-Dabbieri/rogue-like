@@ -90,5 +90,5 @@ class GameMap:
             #    console.print(
             #        x=entity.x, y=entity.y, string=entity.char, fg=entity.color
             #    )
-            # temporarily print all entities for dev
+            # temporarily print all entities for development
             console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)

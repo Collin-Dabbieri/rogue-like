@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from tcod.console import Console
 
 from tcod.map import compute_fov
@@ -9,6 +10,7 @@ from tcod.map import compute_fov
 from input_handlers import MainGameEventHandler
 from message_log import MessageLog
 from render_functions import render_bar, render_names_at_mouse_location
+import tile_types
 
 if TYPE_CHECKING:
     from entity import Actor
@@ -30,6 +32,8 @@ class Engine:
             if entity.ai:
                 entity.ai.perform()
 
+        self.tick+=1 # track how many game ticks have elapsed
+
     def update_fov(self) -> None:
         """Recompute the visible area based on the players point of view."""
         self.game_map.visible[:] = compute_fov(
@@ -39,6 +43,20 @@ class Engine:
         )
         # If a tile is "visible" it should be added to "explored".
         self.game_map.explored |= self.game_map.visible
+
+    def spread_corruption(self) -> None:
+        '''Spread corruption from corrupted tiles to adjacent tiles'''
+
+        spread_every=5 # spread corruption every spread_every game ticks
+        if self.tick%spread_every==0:
+
+            x_match, y_match = np.where(self.game_map.tiles==tile_types.corrupted_floor)
+
+            for i in range(len(x_match)):
+                dx=np.random.choice([-1,0,1])
+                dy=np.random.choice([-1,0,1])
+                if self.game_map.tiles[x_match[i]+dx,y_match[i]+dy]==tile_types.floor:
+                    self.game_map.tiles[x_match[i]+dx,y_match[i]+dy]=tile_types.corrupted_floor
 
     def render(self, console: Console) -> None:
         self.game_map.render(console)

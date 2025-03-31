@@ -80,6 +80,7 @@ class MainGameEventHandler(EventHandler):
 
             self.engine.handle_enemy_turns()
             self.engine.update_fov()  # Update the FOV before the players next action.
+            self.engine.spread_corruption()
 
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[Action]:
         action: Optional[Action] = None

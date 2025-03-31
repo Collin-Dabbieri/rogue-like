@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import random
 from typing import Iterator, List, Tuple, TYPE_CHECKING
 
@@ -60,7 +61,7 @@ def place_entities(
                 else:
                     entity_factories.troll.spawn(dungeon, x, y)
     else:
-        num_deer=random.randint(0,3)
+        num_deer=random.randint(0,6)
 
         for i in range(num_deer):
             x = random.randint(room.x1 + 1, room.x2 - 1)
@@ -135,5 +136,11 @@ def generate_dungeon(
 
         # Finally, append the new room to the list.
         rooms.append(new_room)
+
+    # make a random floor tile corrupted                
+    arr=dungeon.tiles['walkable']
+    x_idx, y_idx = np.where(arr)
+    rand=np.random.randint(0,len(x_idx)-1) #randint includes both bounds
+    dungeon.tiles[x_idx[rand], y_idx[rand]] = tile_types.corrupted_floor
 
     return dungeon

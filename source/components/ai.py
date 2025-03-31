@@ -6,8 +6,9 @@ import numpy as np  # type: ignore
 import tcod
 from tcod.map import compute_fov
 import random
+import tile_types
 
-from actions import Action, MeleeAction, MovementAction, WaitAction
+from actions import Action, MeleeAction, MovementAction, WaitAction, PurifyAction
 
 if TYPE_CHECKING:
     from entity import Actor
@@ -111,9 +112,101 @@ class HostileEnemy(BaseAI):
             ).perform()
         
         return WaitAction(self.entity).perform()
-    
 
+class Orc(BaseAI):
+    '''Orcs chase non-allies, then wander to a random spot, then return home'''
+    def __init__(self, entity: Actor):
+        super().__init__(entity)
+        self.path: List[Tuple[int, int]] = []
+        self.home: Tuple[int, int] = (-999,-999)
+
+    def perform(self) -> None:
+        # when you first spawn in, set your home location to your current spot
+        if self.home[0]==-999:
+            self.home = (self.entity.x,self.entity.y)
+
+        actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
+        if actors_in_fov_sorted is not None:
+            target=actors_in_fov_sorted[0]
+            distance=distances_sorted[0]
+            
+            dx = target.x - self.entity.x
+            dy = target.y - self.entity.y
+
+            if distance <= 1:
+                return MeleeAction(self.entity, dx, dy).perform()
+            
+            self.path = self.get_path_to(target.x, target.y)
+
+        if self.path:
+            dest_x, dest_y = self.path.pop(0)
+            # once you move, the path will have one fewer step
+            self.path=self.path[1:]
+            return MovementAction(
+                self.entity, dest_x - self.entity.x, dest_y - self.entity.y,
+            ).perform()
+        
+        # if you don't have a path, you either just got home or you just got to the place you're wandering to
+        elif (self.entity.x,self.entity.y) == self.home:
+            # you're at your home location
+
+            # pick a new wander destination, which is just a random walkable tile
+            arr=self.entity.gamemap.tiles['walkable']
+            x_idx, y_idx = np.where(arr)
+            rand=random.randint(0,len(x_idx)-1) #randint includes both bounds
+
+            self.path=self.get_path_to(x_idx[rand], y_idx[rand])
+        else:
+            # you have no path and you're not home, go home
+            self.path=self.get_path_to(self.home[0], self.home[1])
+
+        return WaitAction(self.entity).perform()
+    
+class Troll(BaseAI):
+    '''Trolls just chase non-allies and then return home'''
+    def __init__(self, entity: Actor):
+        super().__init__(entity)
+        self.path: List[Tuple[int, int]] = []
+        self.home: Tuple[int, int] = (-999,-999)
+
+    def perform(self) -> None:
+        # when you first spawn in, set your home location to your current spot
+        if self.home[0]==-999:
+            self.home = (self.entity.x,self.entity.y)
+
+        actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
+        if actors_in_fov_sorted is not None:
+            target=actors_in_fov_sorted[0]
+            distance=distances_sorted[0]
+            
+            dx = target.x - self.entity.x
+            dy = target.y - self.entity.y
+
+            if distance <= 1:
+                return MeleeAction(self.entity, dx, dy).perform()
+            
+            self.path = self.get_path_to(target.x, target.y)
+
+        if self.path:
+            dest_x, dest_y = self.path.pop(0)
+            # once you move, the path will have one fewer step
+            self.path=self.path[1:]
+            return MovementAction(
+                self.entity, dest_x - self.entity.x, dest_y - self.entity.y,
+            ).perform()
+        
+        # if you don't have a path, you either just got home or you just stopped chasing something
+        elif (self.entity.x,self.entity.y) == self.home:
+            # you're at your home location
+            return WaitAction(self.entity).perform()
+        else:
+            # you have no path and you're not home, go home
+            self.path=self.get_path_to(self.home[0], self.home[1])
+
+        return WaitAction(self.entity).perform()
+    
 class Animal(BaseAI):
+    '''Animals run away from non-allies and wander'''
     def __init__(self, entity: Actor):
         super().__init__(entity)
         self.path: List[Tuple[int, int]] = []
@@ -128,16 +221,18 @@ class Animal(BaseAI):
             self.path=[]
 
             target=actors_in_fov_sorted[0]
-            # want to return dx,dy of 0,-1,1 with the proper direction
+            # want to return dx,dy of 0,-1, or 1 with the proper direction
             # if (target.x - self.entity.x)>0 return 1, if =0 return 0, if <0 return -1, luckily np.sign does this
             dx = np.sign(target.x - self.entity.x)
             dy = np.sign(target.y - self.entity.y)
             # move away from the target
             return MovementAction(self.entity,-dx,-dy).perform()
         
-        # if you've arrived at your destination, pick a new destination
-        if len(self.path)==0:
-            self.path=[]
+        # if you're standing on a corrupted tile, purify it
+        if self.engine.game_map.tiles[self.entity.x,self.entity.y]==tile_types.corrupted_floor:
+            return PurifyAction(self.entity).perform()
+        
+        # if []: will return False, so when the path runs out it will pick a new path
         # if you have a path you're wandering toward, head there
         if self.path:
             dest_x, dest_y = self.path.pop(0)
@@ -150,9 +245,9 @@ class Animal(BaseAI):
             # pick a new wander destination, which is just a random walkable tile
             arr=self.entity.gamemap.tiles['walkable']
             x_idx, y_idx = np.where(arr)
-            rand_int=random.randint(0,len(x_idx))
+            rand=random.randint(0,len(x_idx)-1) #randint includes both bounds
 
-            self.path=self.get_path_to(x_idx[rand_int], y_idx[rand_int])
+            self.path=self.get_path_to(x_idx[rand], y_idx[rand])
     
         return WaitAction(self.entity).perform()
         

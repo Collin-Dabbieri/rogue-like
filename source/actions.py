@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Tuple, TYPE_CHECKING
-
+import tile_types
 import color
 
 if TYPE_CHECKING:
@@ -37,6 +37,15 @@ class EscapeAction(Action):
 class WaitAction(Action):
     def perform(self) -> None:
         pass
+
+class PurifyAction(Action):
+    '''Should be called if standing on a corrupted tile and want to purify it'''
+    def perform(self) -> None:
+        self.engine.game_map.tiles[self.entity.x,self.entity.y]=tile_types.floor
+
+        self.engine.message_log.add_message(
+            f"{self.entity.name.capitalize()} purifies corruption", color.white
+        )
     
 class ActionWithDirection(Action):
     def __init__(self, entity: Actor, dx: int, dy: int):
