@@ -56,18 +56,19 @@ class BaseAI(Action):
         )
     
     def get_actors_in_fov(self):
-        '''Gets all actors within fov of self, sorted by distance from self'''
+        '''Gets all non-ally actors within fov of self, sorted by distance from self'''
         fov=self.get_fov()
         actors_in_fov=[]
         distances=[]
         for target in set(self.entity.gamemap.actors) - {self.entity}:
             if fov[target.x,target.y]:
-                #the target entity you're checking is within fov of self
-                actors_in_fov.append(target)
-                dx = target.x - self.entity.x
-                dy = target.y - self.entity.y
-                distance = max(abs(dx), abs(dy))  # Chebyshev distance.
-                distances.append(distance)
+                if target.faction!=self.entity.faction:
+                    #the target entity you're checking is within fov of self
+                    actors_in_fov.append(target)
+                    dx = target.x - self.entity.x
+                    dy = target.y - self.entity.y
+                    distance = max(abs(dx), abs(dy))  # Chebyshev distance.
+                    distances.append(distance)
 
         if len(actors_in_fov)==0:
             return None,None
@@ -85,24 +86,15 @@ class HostileEnemy(BaseAI):
         self.path: List[Tuple[int, int]] = []
 
     def perform(self) -> None:
-        # hostile enemies can target any Actor
+        # hostile enemies can target any non-ally Actor
         # they will target the closest Actor that is within their vision
         actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
         if actors_in_fov_sorted is None:
             return WaitAction(self.entity).perform()
         
-        # Orcs and Trolls should not target other orcs and trolls
-        target = None
-        for i in range(len(actors_in_fov_sorted)):
-            actor=actors_in_fov_sorted[i]
-            if actor.faction!=self.entity.faction:
-                target=actor
-                distance=distances_sorted[i]
-                break
-
-        if target is None:
-            return WaitAction(self.entity).perform()
+        target=actors_in_fov_sorted[0]
+        distance=distances_sorted[0]
         
         dx = target.x - self.entity.x
         dy = target.y - self.entity.y
@@ -117,7 +109,7 @@ class HostileEnemy(BaseAI):
             return MovementAction(
                 self.entity, dest_x - self.entity.x, dest_y - self.entity.y,
             ).perform()
-
+        
         return WaitAction(self.entity).perform()
     
 
@@ -130,38 +122,38 @@ class Animal(BaseAI):
         # if there is an Actor in your fov that is not in your faction, run away from it
         actors_in_fov_sorted,distances_sorted=self.get_actors_in_fov()
 
-        if actors_in_fov_sorted is None:
-            dx=random.randint(-1,1)
-            dy=random.randint(-1,1)
-            return MovementAction(
-                self.entity, dx, dy,
-            ).perform()
+        if actors_in_fov_sorted is not None:
 
-        # check if actors in field-of-view are not in your faction
-        target = None
-        for i in range(len(actors_in_fov_sorted)):
-            actor=actors_in_fov_sorted[i]
-            if actor.faction!=self.entity.faction:
-                target=actor
-                break
+            # reset wander path because evading does not follow self.path
+            self.path=[]
 
-        if target is None:
-            dx=random.randint(-1,1)
-            dy=random.randint(-1,1)
-            return MovementAction(
-                self.entity, dx, dy,
-            ).perform()
+            target=actors_in_fov_sorted[0]
+            # want to return dx,dy of 0,-1,1 with the proper direction
+            # if (target.x - self.entity.x)>0 return 1, if =0 return 0, if <0 return -1, luckily np.sign does this
+            dx = np.sign(target.x - self.entity.x)
+            dy = np.sign(target.y - self.entity.y)
+            # move away from the target
+            return MovementAction(self.entity,-dx,-dy).perform()
         
-        dx = target.x - self.entity.x
-        dy = target.y - self.entity.y
-
-        self.path = self.get_path_to(target.x, target.y)
-
+        # if you've arrived at your destination, pick a new destination
+        if len(self.path)==0:
+            self.path=[]
+        # if you have a path you're wandering toward, head there
         if self.path:
             dest_x, dest_y = self.path.pop(0)
-            # move away from instead of toward
+            # once you move, the path will have one fewer step
+            self.path=self.path[1:]
             return MovementAction(
-                self.entity, self.entity.x - dest_x, self.entity.y - dest_y,
+                self.entity, dest_x - self.entity.x, dest_y - self.entity.y,
             ).perform()
+        else:
+            # pick a new wander destination, which is just a random walkable tile
+            arr=self.entity.gamemap.tiles['walkable']
+            x_idx, y_idx = np.where(arr)
+            rand_int=random.randint(0,len(x_idx))
 
+            self.path=self.get_path_to(x_idx[rand_int], y_idx[rand_int])
+    
         return WaitAction(self.entity).perform()
+        
+
